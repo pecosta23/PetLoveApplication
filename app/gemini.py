@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 KEY = os.getenv("GEMINI_API_KEY")
-MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
 
 app = FastAPI(title="PetLove API Test With Gemini")
 
@@ -25,7 +25,6 @@ async def q_and_a(req: Question):
 
     payload = {
         "systemInstruction": {
-            "role": "user",
             "parts": [
                 {
                     "text": (
@@ -49,17 +48,16 @@ async def q_and_a(req: Question):
             }
         ],
         "generationConfig": {
-            "temperature": 0.2,
-            "maxOutputTokens": 500
+            "temperature": 0.7,
+            "maxOutputTokens": 800
         }
     }
 
     headers = {
-        "x-goog-api-key": KEY,
         "Content-Type": "application/json"
     }
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={KEY}"
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
@@ -77,17 +75,15 @@ async def q_and_a(req: Question):
             raise ValueError("Nenhuma resposta recebida do modelo")
 
         content = candidates[0].get("content", {})
-
-        # O texto pode vir em vários formatos dependendo do modelo
         parts = content.get("parts")
-        if parts and isinstance(parts, list) and "text" in parts[0]:
-            text = parts[0]["text"]
-        else:
-            # fallback: Gemini às vezes retorna 'output_text' direto
-            text = content.get("text")
+
+        if not parts or not isinstance(parts, list):
+            raise ValueError(f"A estrutura de resposta não é válida: {content}")
+        
+        text = parts[0].get("text", "")
 
         if not text:
-            raise ValueError(f"Não encontrei texto na resposta: {content}")
+            raise ValueError(f"Não há texto na resposta: {data}")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Falha ao parsear resposta Gemini: {e}")
