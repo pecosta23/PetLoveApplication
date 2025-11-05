@@ -24,20 +24,23 @@ async def q_and_a(req: Question):
         raise HTTPException(status_code=500, detail="API key do Gemini não configurada")
 
     payload = {
-        "model": MODEL,
+        "systemInstruction": {
+            "role": "user",
+            "parts": [
+                {
+                    "text": (
+                        "Você é o melhor assistente de vendas dentro de um e-commerce de pets de nome PetLove. "
+                        "Responda sempre de forma clara e educada. "
+                        "Quando identificar o momento, sugira produtos do nosso catálogo "
+                        "(rações, acessórios e brinquedos). "
+                        "Para recomendar ração, peça informações como idade, porte e alergias."
+                    )
+                }
+            ]
+        },
         "contents": [
             {
-                "parts": [
-                    {
-                        "text": (
-                            "Você é o melhor assistente de vendas dentro de um e-comerce de pets de nome PetLove. "
-                            "É crucial que você responda a cada pergunta de forma clara e educada. E quando você identificar o momento correto, sugira produtos do nosso catálogo (rações, acessórios e brinquedos). "
-                            "Quando for recomendar qualquer tipo de ração pergunte por mais informações como: idade e porte do animal assim como possíveis alergias."
-                        )
-                    }
-                ]
-            },
-            {
+                "role": "user",
                 "parts": [
                     {
                         "text": req.question
@@ -72,11 +75,24 @@ async def q_and_a(req: Question):
         candidates = data.get("candidates", [])
         if not candidates:
             raise ValueError("Nenhuma resposta recebida do modelo")
-        content = candidates[0]["content"]["parts"][0]["text"]
+
+        content = candidates[0].get("content", {})
+
+        # O texto pode vir em vários formatos dependendo do modelo
+        parts = content.get("parts")
+        if parts and isinstance(parts, list) and "text" in parts[0]:
+            text = parts[0]["text"]
+        else:
+            # fallback: Gemini às vezes retorna 'output_text' direto
+            text = content.get("text")
+
+        if not text:
+            raise ValueError(f"Não encontrei texto na resposta: {content}")
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Falha ao parsear resposta Gemini: {e}")
-
-    return {"response": content}
+    
+    return {"response": text.strip()}
 
 @app.get("/")
 async def root():
