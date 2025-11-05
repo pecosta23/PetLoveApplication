@@ -1,3 +1,10 @@
+'''
+I tried using OpenAI at first but it did not work great kept getting "insufficient_quota" type of error
+tried everything even creating a new account, but it did not work
+so I took the base of this project and used to develop "gemini.py" and it works great 
+just needed a few changes on the payload variable witch I spent a lot of time to get it right :)
+'''
+
 import os
 from typing import Optional
 from fastapi import FastAPI, HTTPException, Request

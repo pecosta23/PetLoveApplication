@@ -5,23 +5,27 @@ from pydantic import BaseModel, Field
 import httpx
 from dotenv import load_dotenv
 
+# load my .env variables like the key from google api and the model 
 load_dotenv()
 
 KEY = os.getenv("GEMINI_API_KEY")
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
 
+# title of the application
 app = FastAPI(title="PetLove API Test With Gemini")
 
+# base classes Q & A
 class Question(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
 
 class Answer(BaseModel):
     response: str
 
+# endpoint described at the documentation 
 @app.post("/api/question-and-answer", response_model=Answer)
 async def q_and_a(req: Question):
     if not KEY:
-        raise HTTPException(status_code=500, detail="API key do Gemini não configurada")
+        raise HTTPException(status_code=500, detail="API key do Gemini não configurada") # catch request without API key
 
     payload = {
         "systemInstruction": {
@@ -52,24 +56,26 @@ async def q_and_a(req: Question):
             "maxOutputTokens": 800
         }
     }
-
+    # type
     headers = {
         "Content-Type": "application/json"
     }
-
+    # model url with api key
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={KEY}"
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
+            # wait for response
             resp = await client.post(url, json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()
     except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=500, detail={"error": "Erro de conexão Gemini", "info": e.response.text})
+        raise HTTPException(status_code=500, detail={"error": "Erro de conexão Gemini", "info": e.response.text}) # conection error
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) # conection type error described
 
     try:
+        # list of answers from gemini called "candidates"
         candidates = data.get("candidates", [])
         if not candidates:
             raise ValueError("Nenhuma resposta recebida do modelo")
@@ -77,18 +83,19 @@ async def q_and_a(req: Question):
         content = candidates[0].get("content", {})
         parts = content.get("parts")
 
+        # parts is a list
         if not parts or not isinstance(parts, list):
             raise ValueError(f"A estrutura de resposta não é válida: {content}")
         
         text = parts[0].get("text", "")
 
         if not text:
-            raise ValueError(f"Não há texto na resposta: {data}")
+            raise ValueError(f"Não há texto na resposta: {data}") # json without text data
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha ao parsear resposta Gemini: {e}")
+        raise HTTPException(status_code=500, detail=f"Falha ao parsear resposta Gemini: {e}") # invalid structure and other errors
     
-    return {"response": text.strip()}
+    return {"response": text.strip()} # response as final message
 
 @app.get("/")
 async def root():
