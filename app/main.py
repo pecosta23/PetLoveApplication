@@ -48,7 +48,25 @@ async def q_and_a(req:Question):
         "Content-Type": "application/json",
     }
 
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post("https://api.openia.com/v1/char/completions", json=payload, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+
+        gtp_resp = data.get("choices", [])[0].get("message", {}).get("content", "").strip()
+        return {"response": gtp_resp}
     
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=500, detail={"error": "Erro de conexao", "info": e.respose.text})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "POST /api/question-and-answer"}
+
+
 
 
 
