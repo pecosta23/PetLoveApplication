@@ -50,7 +50,7 @@ async def q_and_a(req:Question):
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post("https://api.openia.com/v1/char/completions", json=payload, headers=headers)
+            resp = await client.post("https://api.openia.com/v1/chat/completions", json=payload, headers=headers)
             resp.raise_for_status()
             data = resp.json()
 
@@ -58,7 +58,7 @@ async def q_and_a(req:Question):
         return {"response": gtp_resp}
     
     except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=500, detail={"error": "Erro de conexao", "info": e.respose.text})
+        raise HTTPException(status_code=500, detail={"error": "Erro de conexao", "info": e.response.text})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
