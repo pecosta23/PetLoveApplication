@@ -6,7 +6,6 @@ just needed a few changes on the payload variable witch I spent a lot of time to
 '''
 
 import os
-from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
